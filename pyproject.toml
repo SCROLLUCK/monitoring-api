@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "flex-back-end"
+version = "0.0.1"
+description = ""
+authors = ["Lucas Nather <natherlucas@gmail.com>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.9,<4" 
+fastapi = {extras = ["standard"], version = "^0.115.2"}
+tortoise-orm = {extras = ["asyncpg"], version = "^0.25.0"}
+uvicorn = "^0.34.3"
+asyncio = "^3.4.3"
+bcrypt = "^4.3.0"
+pyjwt = "^2.10.1"
+python-dotenv = "^1.0.0"
+aiomysql = "^0.2.0"
+paho-mqtt = "^2.1.0"
+redis = "^6.2.0"
+aerich = "^0.9.1"
+python-socketio = {extras = ["asyncio-client"], version = "^5.13.0"}
+openpyxl = "^3.1.5"
+pytest = "^8.4.1"
+python-dateutil = "^2.9.0.post0"
+pypdf = "^6.0.0"
+reportlab = "^4.4.3"
+termcolor = "^3.1.0"
+toml = "^0.10.2"
+faker = "^37.5.3"
+pytest-mock = "^3.14.1"
+aiosqlite = "^0.21.0"
+pytest-cov = "^6.2.1"
+asyncua = "^1.1.6"
+
+[tool.poetry.group.dev.dependencies]
+pytest-asyncio = "^1.1.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.aerich]
+tortoise_orm = "config.tortoise_config.TORTOISE_ORM"
+location = "./migrations"
+src_folder = "./."

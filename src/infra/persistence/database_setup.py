@@ -1,56 +1,99 @@
-from tortoise import Tortoise
-from tortoise.contrib.fastapi import register_tortoise
 import os
+from src.main import config
 
-# Configuração do PostgreSQL
-DB_CONFIG = {
-    "connections": {
-        "default": {
-            "engine": "tortoise.backends.asyncpg",
-            "credentials": {
-                "host": os.getenv("POSTGRESQL_HOST", "localhost"),
-                "port": os.getenv("POSTGRESQL_PORT_NUMBER", "5432"),
-                "user": os.getenv("POSTGRESQL_USERNAME", "monitoring"),
-                "password": os.getenv("POSTGRESQL_PASSWORD", "123"),
-                "database": os.getenv("POSTGRESQL_DATABASE", "monitoring"),
+from re import sub
+
+import tortoise
+from pydantic import BaseModel
+
+from tortoise import Tortoise, fields
+
+from tortoise.contrib.fastapi import register_tortoise
+from fastapi import FastAPI
+from tortoise.contrib.pydantic import pydantic_model_creator
+from src.utils.logging import  logger
+
+class DatabaseHandler:
+    
+    db_url = f'postgres://{os.getenv("POSTGRESQL_USERNAME")}:{os.getenv("POSTGRESQL_PASSWORD")}@{os.getenv("POSTGRESQL_HOST")}:{os.getenv("POSTGRESQL_PORT_NUMBER")}/{os.getenv("POSTGRESQL_DATABASE")}'
+    CONFIG = {
+        "connections": {
+            "default": db_url,
+        },
+        "apps": {
+            "models": {
+                "models": ["src.infra.persistence.models"],
+                "default_connection": "default"
             }
         }
-    },
-    "apps": {
-        "models": {
-            "models": ["src.infra.persistence.models"],  # APENAS a pasta models
-            "default_connection": "default",
-        }
-    },
-    "use_tz": False,
-    "timezone": "UTC",
-}
+    }
 
-class DatabaseSetup:
-    
-    @staticmethod
-    async def init_db():
-        """Inicializar conexão com o banco de dados"""
+    @classmethod
+    async def connect(cls, app: FastAPI):
         try:
-            await Tortoise.init(config=DB_CONFIG)
-            await Tortoise.generate_schemas()
-            print("✅ Database initialized successfully!")
+            Tortoise.init_models(
+                ["src.infra.persistence.models"],
+                "models"
+            )
+
+            register_tortoise(
+                app=app,
+                db_url=cls.db_url,
+                modules={
+                    "models": ["src.infra.persistence.models"],
+                },
+                generate_schemas=True,
+            )
+            await Tortoise.init(config=cls.CONFIG)
+            logger.info("✅ Database connection established")
         except Exception as e:
-            print(f"❌ Database initialization failed: {e}")
+            logger.error("Error connecting to database:", str(e))
             raise
+
+def snake_case(s):
+    return '_'.join(
+        sub(
+            '([A-Z][a-z]+)', r' \1',
+            sub(
+                '([A-Z]+)', r' \1',
+                s.removesuffix("Model").replace('-', ' ')
+            )
+        ).split()
+    ).lower()
+
+
+class IdMixin(tortoise.Model):
+    id = fields.UUIDField(primary_key=True)
     
-    @staticmethod
-    async def close_db():
-        """Fechar conexão com o banco de dados"""
-        await Tortoise.close_connections()
-        print("✅ Database connections closed!")
+    class Meta:
+        abstract = True
+
+
+class TimestampMixin(IdMixin):
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
     
-    @staticmethod
-    def register_database(app):
-        """Registrar o Tortoise no FastAPI"""
-        register_tortoise(
-            app,
-            config=DB_CONFIG,
-            generate_schemas=True,
-            add_exception_handlers=True,
+    class Meta:
+        abstract = True
+
+
+class TortoiseModel(TimestampMixin):
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        
+        if not cls._meta.abstract:
+            cls._meta.db_table = snake_case(cls.__name__)
+    
+    async def to_pydantic(self) -> BaseModel:
+        tortoise_pydantic = pydantic_model_creator(self.__class__)
+        return await tortoise_pydantic.from_tortoise_orm(self)
+    
+    @classmethod
+    async def from_pydantic(cls, model: BaseModel):
+        return cls(
+            **model.model_dump(exclude={"created_at"}),
+            id=model.id_ if getattr(model, "id_") else model.id
         )
+    
+    class Meta:
+        abstract = True

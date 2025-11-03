@@ -2,7 +2,8 @@
 from typing import Type
 from uuid import uuid4
 
-from src.application.dto.requests.sensor import MonitoringRequest
+from src.application.dto.requests.monitoring import MonitoringRequest
+from src.application.dto.responses.monitoring import MonitoringResponse
 from src.domain.models.monitoring import Monitoring
 from src.domain.repositories.monitoring_repository_interface import IMonitoringRepository
 from src.infra.persistence.repository.monitoring_repository import MonitoringRepository
@@ -23,5 +24,5 @@ class MonitoringService:
   @classmethod
   async def get_messages(cls):
     monitoring_data = await cls.monitoring_repository.get_messages()
-    data_values = await monitoring_data.values()
-    return data_values
+    data = [MonitoringResponse(**monitoring.model_dump()) for monitoring in monitoring_data]
+    return data

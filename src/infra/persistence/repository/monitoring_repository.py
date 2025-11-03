@@ -20,5 +20,11 @@ class MonitoringRepository(IMonitoringRepository):
       
   @classmethod
   async def get_messages(cls):
-    monitoring_data = MonitoringModel.all()
-    return monitoring_data
+    monitoring_data = await MonitoringModel.all()
+    data = []
+    for monitoring in monitoring_data:
+      data.append(Monitoring(id_=monitoring.id, 
+                             timestamp=monitoring.timestamp, 
+                             temperature=monitoring.temperature, 
+                             humidity=monitoring.humidity))
+    return data
