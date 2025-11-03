@@ -5,7 +5,7 @@ from src.application.dto.responses.monitoring import MonitoringResponse
 from src.application.services.monitoring_service import MonitoringService
 
 
-monitoring_router = APIRouter(prefix="/monitoring")
+monitoring_router = APIRouter(prefix="/monitoring",tags=["Monitoring"])
 
 @monitoring_router.get('/', response_model=list[MonitoringResponse])
 async def get_messages():

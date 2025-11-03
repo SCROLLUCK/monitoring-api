@@ -18,7 +18,8 @@ from src.presentation.routers.monitoring_router import monitoring_router
 from src.utils.init_services import init_services
 
 
-tags_metadata = [{"name": "Monitoramento", "Sensor": "Ambiente"}]
+tags_metadata = [{"name": "Monitoring", "description": "Monitoring"}]
+
 
 
 @asynccontextmanager
